@@ -1,5 +1,4 @@
 from pytubefix import YouTube
-from pytubefix.cli import on_progress
 import os
 
 
@@ -26,7 +25,6 @@ def download_audio(url, save_path):
         print("Download completed!")
     except Exception as e:
         print(f"Error: {e}")
-
 
 
 if __name__ == "__main__":
