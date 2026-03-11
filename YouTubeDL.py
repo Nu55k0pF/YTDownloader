@@ -1,4 +1,5 @@
 from pytubefix import YouTube
+from pytubefix.cli import on_progress
 import os
 
 
@@ -21,7 +22,8 @@ def download_audio(url, save_path):
         yt = YouTube(url)
         ys = yt.streams.filter(only_audio=True).first()
         print(f"Downloading: {yt.title}")
-        ys.download(save_path)
+        # download and provide mp3 extension
+        ys.download(save_path, filename=yt.title + ".mp3")
         print("Download completed!")
     except Exception as e:
         print(f"Error: {e}")
