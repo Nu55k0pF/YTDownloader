@@ -5,7 +5,7 @@ import os
 
 # Credits: https://dev.to/pranjol-dev/creating-a-youtube-video-downloader-with-python-a-step-by-step-guide-281f
 
-
+SAVE_PATH = "//PRODSERV5/ZenonImport"
 
 def download_video(url, save_path):
     try:
@@ -19,10 +19,13 @@ def download_video(url, save_path):
 
 if __name__ == "__main__":
     url = input("Enter the YouTube video URL: ")
-    save_path = input("Enter the path where the video will be saved: ")
+    save_path = SAVE_PATH
     if not os.path.exists(save_path):
+        save_path = input("Enter the path where the video will be saved: ")
         os.makedirs(save_path)
     download_video(url, save_path)
+
+
 
 
 # url = "https://www.youtube.com/watch?v=9bZkp7q19f0"

@@ -1,0 +1,71 @@
+<!doctype html><!doctype html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</html></body>    </form>        </p>            <button type="submit">Download</button>        <p>        </p>            <input type="text" id="save_path" name="save_path" size="60">            <label for="save_path">Save Path (optional, defaults to {{ default_path }}):</label><br/>        <p>        </p>            <input type="text" id="url" name="url" size="60" required>            <label for="url">Video URL:</label><br/>        <p>    <form method="post">    {% endwith %}      {% endif %}        </ul>        {% endfor %}          <li>{{ m }}</li>        {% for m in messages %}        <ul>      {% if messages %}    {% with messages = get_flashed_messages() %}    <h1>YouTube Downloader</h1><body></head>    <title>YouTube Downloader</title>    <meta charset="utf-8"><head><html lang="en"><html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>YouTube Downloader</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        label { display: block; margin: 8px 0; }
+        input[type=text] { width: 100%; padding: 8px; }
+        button { padding: 10px 20px; font-size: 16px; }
+        .messages { margin-top: 20px; color: green; }
+    </style>
+</head>
+<body>
+    <h1>YouTube Downloader</h1>
+    <form method="post">
+        <label>Video URL:<br>
+            <input type="text" name="url" placeholder="https://www.youtube.com/watch?v=...">
+        </label>
+        <label>Save Path (optional):<br>
+            <input type="text" name="save_path" placeholder="{{ default_path }}">
+        </label>
+        <button type="submit">Download</button>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="messages">
+          <ul>
+          {% for m in messages %}
+            <li>{{ m }}</li>
+          {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endwith %}
+</body>
+</html>
