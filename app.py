@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import os
 
 # reuse backend logic from YouTubeDL.py
-from YouTubeDL import download_video, SAVE_PATH
+from YouTubeDL import download_video, download_audio, SAVE_PATH; download_audio
 
 app = Flask(__name__)
 # secret key is used by Flask to sign session cookies, flash messages, etc.
@@ -26,12 +26,16 @@ def index():
                 flash(f"Could not create directory '{save_path}': {e}")
                 return redirect(url_for('index'))
 
-        # kick off download (this will run synchronously and block the request)
+        # choose between audio-only or full video
+        audio_only = request.form.get("audio_only") == "on"
         try:
-            download_video(url, save_path)
+            if audio_only:
+                download_audio(url, save_path)
+            else:
+                download_video(url, save_path)
             flash("Download finished (see server logs for details).")
         except Exception as exc:
-            flash(f"Error downloading video: {exc}")
+            flash(f"Error downloading: {exc}")
         return redirect(url_for('index'))
 
     # GET
