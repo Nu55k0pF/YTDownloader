@@ -44,3 +44,8 @@ def index():
 if __name__ == '__main__':
     # running in debug mode for development; remove debug=True for production
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+
+# TODO: add logging
+# TODO: add persistentc of save path after download to alternet directory
+# TODO: add explenatory text to website
