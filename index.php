@@ -22,18 +22,21 @@ function sanitize($text) {
 }
 
 function build_yt_dlp_command($outputTemplate, $audioOnly) {
-    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part', '--force-overwrites'];
+    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part', '--force-overwrites', '--no-playlist'];
 
     if ($audioOnly) {
+        // When extracting audio, yt-dlp downloads the source video first and then converts it.
+        // By default it keeps the original video file (often .webm), which can lead to both
+        // an .mp3 and a .webm being present. Use --no-keep-video to remove the source file.
         $commandParts[] = '--extract-audio';
         $commandParts[] = '--audio-format';
         $commandParts[] = 'mp3';
+        $commandParts[] = '--no-keep-video';
     } else {
         $commandParts[] = '--format';
         $commandParts[] = 'mp4';
         $commandParts[] = '--no-write-subs';
         $commandParts[] = '--no-write-thumbnail';
-        $commandParts[] = '--no-playlist';
     }
 
     return $commandParts;
@@ -236,6 +239,7 @@ $flashes = get_flashes();
         </label>
 
         <div style="margin-top: 1rem;">
+            </2><strong>ACHTUNG DER ZENON IMPORT FUNKTIONIERT NOCH NICHT RICHTIG!</strong></h2><br>
             <button type="submit" name="download_type" value="direct">Zenon Import</button>
             <button type="submit" name="download_type" value="browser">Download auf PC</button>
         </div>
