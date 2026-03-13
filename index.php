@@ -50,24 +50,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Build yt-dlp command.
-    $outputTemplate = rtrim($savePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '%(title)s.%(ext)s';
+    // Use forward slashes for the path to avoid escaping issues.
+    $savePathNormalized = str_replace('\\', '/', $savePath);
+    if ($audioOnly) {
+        $outputTemplate = rtrim($savePathNormalized, '/') . '/%(title)s.mp3';
+    } else {
+        $outputTemplate = rtrim($savePathNormalized, '/') . '/%(title)s.mp4';
+    }
     $commandParts = ['yt-dlp', '-o', $outputTemplate];
 
     if ($audioOnly) {
         $commandParts[] = '--extract-audio';
         $commandParts[] = '--audio-format';
         $commandParts[] = 'mp3';
+    } else {
+        // For video, use mp4 template and avoid extra downloads
+        $commandParts[] = '-t';
+        $commandParts[] = 'mp4';
+        $commandParts[] = '--no-js-runtimes';
+        $commandParts[] = '--no-write-subs';
+        $commandParts[] = '--no-write-thumbnail';
+        $commandParts[] = '--no-playlist';
     }
 
     $commandParts[] = $url;
 
-    // Escape each argument.
-    $command = implode(' ', array_map('escapeshellarg', $commandParts));
+    // Run the command directly (no shell) so yt-dlp receives %(title)s literally.
+    $descriptors = [
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
 
-    // Run the command.
+    $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
     $output = [];
-    $exitCode = 0;
-    exec($command . ' 2>&1', $output, $exitCode);
+    $exitCode = 1;
+
+    if (is_resource($process)) {
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+        $output = array_filter(array_merge(explode("\n", $stdout), explode("\n", $stderr)), fn($line) => $line !== '');
+    } else {
+        $output[] = 'Failed to start yt-dlp process.';
+    }
 
     if ($exitCode === 0) {
         flash('Download finished. Check the save directory for the file.', 'success');
