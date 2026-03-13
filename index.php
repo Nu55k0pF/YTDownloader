@@ -22,16 +22,15 @@ function sanitize($text) {
 }
 
 function build_yt_dlp_command($outputTemplate, $audioOnly) {
-    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part'];
+    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part', '--force-overwrites'];
 
     if ($audioOnly) {
         $commandParts[] = '--extract-audio';
         $commandParts[] = '--audio-format';
         $commandParts[] = 'mp3';
     } else {
-        $commandParts[] = '-t';
+        $commandParts[] = '--format';
         $commandParts[] = 'mp4';
-        $commandParts[] = '--no-js-runtimes';
         $commandParts[] = '--no-write-subs';
         $commandParts[] = '--no-write-thumbnail';
         $commandParts[] = '--no-playlist';
