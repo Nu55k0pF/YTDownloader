@@ -206,8 +206,8 @@ $flashes = get_flashes();
         </label>
 
         <div style="margin-top: 1rem;">
-            <button type="submit" name="download_type" value="direct">Download to Server</button>
-            <button type="submit" name="download_type" value="browser">Download to Browser</button>
+            <button type="submit" name="download_type" value="direct">Zenon Import</button>
+            <button type="submit" name="download_type" value="browser">Download auf PC</button>
         </div>
 
         <div class="hint" style="margin-top: 0.5rem;">
@@ -217,7 +217,7 @@ $flashes = get_flashes();
     </form>
 
     <footer style="margin-top: 2rem; text-align: center; font-size: 0.8rem; color: #666;">
-        Version 1.0
+        Version 1.1 
     </footer>
 
 </body>
