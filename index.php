@@ -247,7 +247,7 @@ $flashes = get_flashes();
     </form>
 
     <footer style="margin-top: 2rem; text-align: center; font-size: 0.8rem; color: #666;">
-        Version 1.3
+        Version 1.4
     </footer>
 
 </body>
