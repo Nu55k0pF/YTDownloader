@@ -40,17 +40,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Ensure directory exists.
-    if (!is_dir($savePath)) {
-        if (!@mkdir($savePath, 0777, true)) {
-            flash("Could not create directory '$savePath'.", 'error');
-            header('Location: ' . $_SERVER['PHP_SELF']);
-            exit;
-        }
+    // Normalize paths for different operations
+    $savePathForFS = str_replace('/', '\\', $savePath); // Backslashes for Windows filesystem operations
+    $savePathNormalized = str_replace('\\', '/', $savePath); // Forward slashes for yt-dlp
+
+    // Simple directory check: ensure the path is accessible
+    if (!is_dir($savePathForFS) && !@mkdir($savePathForFS, 0777, true)) {
+        flash("Could not create directory '$savePathForFS'. Please check permissions or try a different path.", 'error');
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
+    if (!is_writable($savePathForFS)) {
+        flash("Cannot write to directory '$savePathForFS'. Please check permissions or try a different path.", 'error');
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
     }
 
     // Build yt-dlp command.
-    // Use forward slashes for the path to avoid escaping issues.
+    // Normalize path separators for yt-dlp (it handles forward slashes on Windows)
     $savePathNormalized = str_replace('\\', '/', $savePath);
     if ($audioOnly) {
         $outputTemplate = rtrim($savePathNormalized, '/') . '/%(title)s.mp3';
