@@ -172,9 +172,35 @@ $flashes = get_flashes();
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>YouTube Downloader (PHP)</title>
+    <title>RF - Video Downloader</title>
     <style>
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 2rem;
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: url('pictures/rathaus_tag_nacht_fg_v1-copy_c_01.jpg') no-repeat center center;
+            background-size: cover;
+            opacity: 0.5;
+            z-index: -2;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 70%, rgba(255,255,255,1) 100%);
+            z-index: -1;
+        }
         label { display: block; margin-top: 1rem; }
         input[type=text] { width: 100%; padding: 0.5rem; font-size: 1rem; }
         button { margin-top: 1rem; padding: 0.75rem 1.25rem; font-size: 1rem; }
