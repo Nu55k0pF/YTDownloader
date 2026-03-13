@@ -5,7 +5,7 @@
 session_start();
 
 // Default save path (UNC path used in the original Python app)
-define('DEFAULT_SAVE_PATH', '\\PRODSERV5\\ZenonImport');
+define('DEFAULT_SAVE_PATH', '\\\\PRODSERV5\\ZenonImport');
 
 function flash($message, $type = 'info') {
     $_SESSION['flash'][] = ['message' => $message, 'type' => $type];
