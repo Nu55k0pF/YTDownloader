@@ -40,6 +40,31 @@ function build_yt_dlp_command($outputTemplate, $audioOnly) {
     return $commandParts;
 }
 
+function run_yt_dlp($commandParts) {
+    $descriptors = [
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+    $output = [];
+    $exitCode = 1;
+
+    if (is_resource($process)) {
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+        $output = array_filter(array_merge(explode("\n", $stdout), explode("\n", $stderr)), fn($line) => $line !== '');
+    } else {
+        $output[] = 'Failed to start yt-dlp process.';
+    }
+
+    return [$exitCode, $output];
+}
+
 $defaultPath = DEFAULT_SAVE_PATH;
 $errors = [];
 $success = false;
@@ -71,27 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly);
         $commandParts[] = $url;
 
-        // Run the command directly (no shell) so yt-dlp receives %(title)s literally.
-        $descriptors = [
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
-        $output = [];
-        $exitCode = 1;
-
-        if (is_resource($process)) {
-            $stdout = stream_get_contents($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-
-            $exitCode = proc_close($process);
-            $output = array_filter(array_merge(explode("\n", $stdout), explode("\n", $stderr)), fn($line) => $line !== '');
-        } else {
-            $output[] = 'Failed to start yt-dlp process.';
-        }
+        // Run the command
+        [$exitCode, $output] = run_yt_dlp($commandParts);
 
         if ($exitCode === 0) {
             flash('Download finished. Check the save directory for the file.', 'success');
@@ -122,26 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $commandParts[] = $url;
 
         // Run the command
-        $descriptors = [
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
-        $output = [];
-        $exitCode = 1;
-
-        if (is_resource($process)) {
-            $stdout = stream_get_contents($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-
-            $exitCode = proc_close($process);
-            $output = array_filter(array_merge(explode("\n", $stdout), explode("\n", $stderr)), fn($line) => $line !== '');
-        } else {
-            $output[] = 'Failed to start yt-dlp process.';
-        }
+        [$exitCode, $output] = run_yt_dlp($commandParts);
 
         if ($exitCode === 0) {
             // Find the downloaded file
