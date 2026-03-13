@@ -212,6 +212,7 @@ $flashes = get_flashes();
     </style>
 </head>
 <body>
+    <img src="pictures/fantasy-logo.png" alt="Logo" style="width: 250px; display: block; margin-bottom: 1rem;" />
     <h1>Radio Fantasy Video Downloader</h1>
         <div class="hint" style="margin-top: 0.5rem;">
             <strong>Anleitung:</strong> Kopiere eine URL von Youtube oder TikTok und f&#252;ge sie in das Video URL-Feld ein. Das Audio des Videos wird heruntergeladen und auf deinem PC oder direkt im Zenon gespeichert. <br>
