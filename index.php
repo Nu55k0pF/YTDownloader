@@ -186,7 +186,11 @@ $flashes = get_flashes();
     </style>
 </head>
 <body>
-    <h1>YouTube Downloader (PHP)</h1>
+    <h1>Radio Fantasy Video Downloader</h1>
+        <div class="hint" style="margin-top: 0.5rem;">
+            <strong>Anleitung:</strong> Kopiere eine URL von Youtube oder TikTok und f&#252;ge sie in das Video URL-Feld ein. Das Audio des Videos wird heruntergeladen und auf deinem PC oder direkt im Zenon gespeichert. <br>
+            <strong>Unterst&#252;tzte Platformen:</strong> Es werden alle g&#228;ngigen Videoplattformen unterst&#252;tzt. F&#252;r eine genaue Auflistung siehe <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">hier</a> 
+        </div>
 
     <?php foreach ($flashes as $flash): ?>
         <div class="flash <?= sanitize($flash['type']) ?>">
@@ -196,7 +200,7 @@ $flashes = get_flashes();
 
     <form method="post">
         <label>
-            YouTube URL
+            Video URL
             <input type="text" name="url" placeholder="https://www.youtube.com/watch?v=..." required />
         </label>
 
@@ -216,7 +220,7 @@ $flashes = get_flashes();
     </form>
 
     <footer style="margin-top: 2rem; text-align: center; font-size: 0.8rem; color: #666;">
-        Version 1.2
+        Version 1.3
     </footer>
 
 </body>
