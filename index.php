@@ -21,6 +21,25 @@ function sanitize($text) {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function build_yt_dlp_command($outputTemplate, $audioOnly) {
+    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part'];
+
+    if ($audioOnly) {
+        $commandParts[] = '--extract-audio';
+        $commandParts[] = '--audio-format';
+        $commandParts[] = 'mp3';
+    } else {
+        $commandParts[] = '-t';
+        $commandParts[] = 'mp4';
+        $commandParts[] = '--no-js-runtimes';
+        $commandParts[] = '--no-write-subs';
+        $commandParts[] = '--no-write-thumbnail';
+        $commandParts[] = '--no-playlist';
+    }
+
+    return $commandParts;
+}
+
 $defaultPath = DEFAULT_SAVE_PATH;
 $errors = [];
 $success = false;
@@ -28,6 +47,7 @@ $success = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $url = trim($_POST['url'] ?? '');
     $audioOnly = isset($_POST['audio_only']) && $_POST['audio_only'] === 'on';
+    $downloadType = $_POST['download_type'] ?? 'direct';
 
     if ($url === '') {
         flash('Please provide a YouTube URL.', 'error');
@@ -35,48 +55,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Direct download to server
-    $savePath = $defaultPath;
 
-    // Normalize paths for different operations
-    $savePathForFS = str_replace('/', '\\', $savePath); // Backslashes for Windows filesystem operations
+// This section deals with downloading to preconfigured server path
+    if ($downloadType === 'direct') {
+        // Direct download to server
+        $savePath = $defaultPath;
 
-    // Build yt-dlp command for direct download
-    if ($audioOnly) {
-        $commandParts = ['yt-dlp', '-P', $savePathForFS, '-o', '%(title)s.mp3', '--extract-audio', '--audio-format', 'mp3'];
-    } else {
-        $commandParts = ['yt-dlp', '-P', $savePathForFS, '-o', '%(title)s.mp4', '-t', 'mp4', '--no-js-runtimes', '--no-write-subs', '--no-write-thumbnail', '--no-playlist'];
-    }
+        // Build yt-dlp command for direct download
+        if ($audioOnly) {
+            $outputTemplate = $savePath . '/%(title)s.mp3';
+        } else {
+            $outputTemplate = $savePath . '/%(title)s.mp4';
+        }
 
-    $commandParts[] = $url;
+        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly);
+        $commandParts[] = $url;
 
-    // Run the command directly (no shell) so yt-dlp receives %(title)s literally.
-    $descriptors = [
-        1 => ['pipe', 'w'],
-        2 => ['pipe', 'w'],
-    ];
+        // Run the command directly (no shell) so yt-dlp receives %(title)s literally.
+        $descriptors = [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
 
-    $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
-    $output = [];
-    $exitCode = 1;
+        $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+        $output = [];
+        $exitCode = 1;
 
-    if (is_resource($process)) {
-        $stdout = stream_get_contents($pipes[1]);
-        $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
+        if (is_resource($process)) {
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
 
-        $exitCode = proc_close($process);
-        $output = array_filter(array_merge(explode("\n", $stdout), explode("\n", $stderr)), fn($line) => $line !== '');
-    } else {
-        $output[] = 'Failed to start yt-dlp process.';
-    }
+            $exitCode = proc_close($process);
+            $output = array_filter(array_merge(explode("\n", $stdout), explode("\n", $stderr)), fn($line) => $line !== '');
+        } else {
+            $output[] = 'Failed to start yt-dlp process.';
+        }
 
-    if ($exitCode === 0) {
-        flash('Download finished. Check the save directory for the file.', 'success');
-    } else {
-        $outputText = implode("\n", $output);
-        flash('Error downloading: ' . sanitize($outputText), 'error');
+        if ($exitCode === 0) {
+            flash('Download finished. Check the save directory for the file.', 'success');
+        } else {
+            $outputText = implode("\n", $output);
+            flash('Error downloading: ' . sanitize($outputText), 'error');
+        }
+
+
+// This section deals with downloading to local machine
+    } elseif ($downloadType === 'browser') {
+        // Download to temp directory and serve to browser
+        $tempDir = sys_get_temp_dir() . '/ytdl_downloads';
+        if (!is_dir($tempDir) && !@mkdir($tempDir, 0755, true)) {
+            flash('Could not create temporary directory for download.', 'error');
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        }
+
+        // Build yt-dlp command for temp download
+        $tempDirNormalized = str_replace('\\', '/', $tempDir);
+        if ($audioOnly) {
+            $outputTemplate = $tempDirNormalized . '/%(title)s.mp3';
+        } else {
+            $outputTemplate = $tempDirNormalized . '/%(title)s.mp4';
+        }
+        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly);
+        $commandParts[] = $url;
+
+        // Run the command
+        $descriptors = [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+        $output = [];
+        $exitCode = 1;
+
+        if (is_resource($process)) {
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            $exitCode = proc_close($process);
+            $output = array_filter(array_merge(explode("\n", $stdout), explode("\n", $stderr)), fn($line) => $line !== '');
+        } else {
+            $output[] = 'Failed to start yt-dlp process.';
+        }
+
+        if ($exitCode === 0) {
+            // Find the downloaded file
+            $files = glob($tempDir . '/*');
+            if (empty($files)) {
+                flash('Download completed but file not found.', 'error');
+                header('Location: ' . $_SERVER['PHP_SELF']);
+                exit;
+            }
+
+            $downloadedFile = $files[0]; // Get the first (and likely only) file
+
+            // Serve the file for download
+            $filename = basename($downloadedFile);
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($downloadedFile));
+            flush();
+            readfile($downloadedFile);
+
+            // Clean up temp file
+            unlink($downloadedFile);
+            exit;
+        } else {
+            $outputText = implode("\n", $output);
+            flash('Error downloading: ' . sanitize($outputText), 'error');
+        }
     }
 
     header('Location: ' . $_SERVER['PHP_SELF']);
@@ -123,11 +219,13 @@ $flashes = get_flashes();
         </label>
 
         <div style="margin-top: 1rem;">
-            <button type="submit">Download to Server</button>
+            <button type="submit" name="download_type" value="direct">Download to Server</button>
+            <button type="submit" name="download_type" value="browser">Download to Browser</button>
         </div>
 
         <div class="hint" style="margin-top: 0.5rem;">
-            <strong>Download to Server:</strong> Saves directly to <code>\\\\PRODSERV5\\ZenonImport</code>
+            <strong>Download to Server:</strong> Saves directly to <code>\\\\PRODSERV5\\ZenonImport</code><br>
+            <strong>Download to Browser:</strong> Downloads the file through your browser
         </div>
     </form>
 
