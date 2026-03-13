@@ -215,7 +215,7 @@ $flashes = get_flashes();
         </label>
 
         <label>
-            <input type="checkbox" name="audio_only" /> Download audio only (MP3)
+            <input type="checkbox" name="audio_only" checked /> Download audio only (MP3)
         </label>
 
         <div style="margin-top: 1rem;">
@@ -224,11 +224,10 @@ $flashes = get_flashes();
         </div>
 
         <div class="hint" style="margin-top: 0.5rem;">
-            <strong>Download to Server:</strong> Saves directly to <code>\\\\PRODSERV5\\ZenonImport</code><br>
-            <strong>Download to Browser:</strong> Downloads the file through your browser
+            <strong>Zenon Import:</strong> Speichert das Audio direct im Zenonbrowser in Redaktion_Temp<br>
+            <strong>Download auf PC:</strong> Speichrt die Datei auf dem lokalen PC herunter
         </div>
     </form>
 
-    <p class="hint">This app uses <code>yt-dlp</code>. Install it and ensure it is available on the server PATH.</p>
 </body>
 </html>
