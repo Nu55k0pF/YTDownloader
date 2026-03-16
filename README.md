@@ -8,3 +8,6 @@
 4. Serve the app with a PHP web server:
 5. Configure "define('DEFAULT_SAVE_PATH', "\\\\Path\\to\\your\\share");
 6. Make shure the webserver user has permission to read/write/change on the the DEFAULT_SAVE_PATH
+
+## Local Server
+php -S localhost:8000
