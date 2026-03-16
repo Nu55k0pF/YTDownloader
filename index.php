@@ -168,6 +168,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+//TODO: Add Option to download only segments of a video. Add boxes in the ui for that too
+
 $flashes = get_flashes();
 ?>
 <!DOCTYPE html>
@@ -256,3 +258,5 @@ $flashes = get_flashes();
 
 </body>
 </html>
+
+
