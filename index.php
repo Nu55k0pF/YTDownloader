@@ -21,8 +21,8 @@ function sanitize($text) {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-function build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly) {
-    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--force-overwrites', '--no-playlist', '--part', ''];
+function build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly, $startTime = '00:00:00', $endTime = 'inf') {
+    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--force-overwrites', '--no-playlist', '--part'];
 
     if ($audioOnly) {
         // When extracting audio, yt-dlp downloads the source video first and then converts it.
@@ -40,7 +40,8 @@ function build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly) {
     }
 
     if ($segmentOnly) {
-        array_push($commandParts, '--download-sections "*.$startTime.-$endTime"'); // Example: download only the first minute
+        $commandParts[] = "--download-sections";
+        $commandParts[] = "*$startTime-$endTime";
     }
 
     return $commandParts;
@@ -79,6 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $url = trim($_POST['url'] ?? '');
     $audioOnly = isset($_POST['audio_only']) && $_POST['audio_only'] === 'on';
     $downloadType = $_POST['download_type'] ?? 'direct';
+    $segmentOnly = isset($_POST['segment_only']) && $_POST['segment_only'] === 'on';
+    $startTime = trim($_POST['startTime'] ?? '');
+    $endTime = trim($_POST['endTime'] ?? '');
 
     if ($url === '') {
         flash('Please provide a YouTube URL.', 'error');
@@ -99,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $outputTemplate = $savePath . '/%(title)s.mp4';
         }
 
-        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly);
+        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly, $startTime, $endTime);
         $commandParts[] = $url;
 
         // Run the command
@@ -130,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $outputTemplate = $tempDirNormalized . '/%(title)s.mp4';
         }
-        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly);
+        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly, $startTime, $endTime);
         $commandParts[] = $url;
 
         // Run the command
@@ -257,7 +261,7 @@ $flashes = get_flashes();
 
         <label>
             <input type="checkbox" name="audio_only" checked /> Nur Audio herunterladen (MP3) <br>
-            <input type="checkbox" name="segment_only" /> Nur einen bestimmten Abschnitt herunterladen <strong>(funktioniert noch nicht)</stron>
+            <input type="checkbox" name="segment_only" /> Nur einen bestimmten Abschnitt herunterladen <strong>(funktioniert noch nicht)</strong>
             <input type="text" name="startTime" placeholder="00:00:00" />
             <input type="text" name="endTime" placeholder="00:01:00" />
         </label>
