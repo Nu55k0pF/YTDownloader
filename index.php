@@ -32,11 +32,13 @@ function build_yt_dlp_command($outputTemplate, $audioOnly) {
         $commandParts[] = '--audio-format';
         $commandParts[] = 'mp3';
         $commandParts[] = '--no-keep-video';
+        $commandParts[] = '--part';
     } else {
         $commandParts[] = '--format';
         $commandParts[] = 'mp4';
         $commandParts[] = '--no-write-subs';
         $commandParts[] = '--no-write-thumbnail';
+        $commandParts[] = '--part';
     }
 
     return $commandParts;
@@ -218,7 +220,7 @@ $flashes = get_flashes();
     <img src="pictures/fantasy-logo.png" alt="Logo" style="width: 250px; display: block; margin-bottom: 1rem;" />
     <h1>Radio Fantasy Video Downloader</h1>
         <div class="hint" style="margin-top: 0.5rem;">
-            <strong>Anleitung:</strong> Kopiere eine URL von Youtube oder TikTok und f&#252;ge sie in das Video URL-Feld ein. Das Audio des Videos wird heruntergeladen und auf deinem PC oder direkt im Zenon gespeichert. <br>
+            <strong>Anleitung:</strong> Kopiere eine URL von Youtube oder TikTok und f&#252;ge sie in das Video URL-Feld ein. Das Audio des Videos wird heruntergeladen und auf deinem PC gespeichert. <br>
             <strong>Unterst&#252;tzte Platformen:</strong> Es werden alle g&#228;ngigen Videoplattformen unterst&#252;tzt. F&#252;r eine genaue Auflistung siehe <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">hier</a> 
         </div>
 
@@ -239,13 +241,10 @@ $flashes = get_flashes();
         </label>
 
         <div style="margin-top: 1rem;">
-            </2><strong>ACHTUNG DER ZENON IMPORT FUNKTIONIERT NOCH NICHT RICHTIG!</strong></h2><br>
-            <button type="submit" name="download_type" value="direct">Zenon Import</button>
             <button type="submit" name="download_type" value="browser">Download auf PC</button>
         </div>
 
         <div class="hint" style="margin-top: 0.5rem;">
-            <strong>Zenon Import:</strong> Speichert das Audio direct im Zenonbrowser in Redaktion_Temp<br>
             <strong>Download auf PC:</strong> Speichrt die Datei auf dem lokalen PC herunter
         </div>
     </form>
