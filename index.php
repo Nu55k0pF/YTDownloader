@@ -257,14 +257,14 @@ $flashes = get_flashes();
         </label>
 
         <div style="margin-top: 1rem;">
-            </2><strong>ACHTUNG DER ZENON IMPORT FUNKTIONIERT NOCH NICHT RICHTIG!</strong></h2><br>
-            <button type="submit" name="download_type" value="direct">Zenon Import</button>
+            <!--</2><strong>ACHTUNG DER ZENON IMPORT FUNKTIONIERT NOCH NICHT RICHTIG!</strong></h2><br> -->
+            <!-- <button type="submit" name="download_type" value="direct">Zenon Import</button> -->
             <button type="submit" name="download_type" value="browser">Download auf PC</button>
         </div>
 
         <div class="hint" style="margin-top: 0.5rem;">
-            <strong>Zenon Import:</strong> Speichert das Audio direct im Zenonbrowser in Redaktion_Temp<br>
-            <strong>Download auf PC:</strong> Speichrt die Datei auf dem lokalen PC herunter
+            <!-- <strong>Zenon Import:</strong> Speichert das Audio direct im Zenonbrowser in Redaktion_Temp<br> -->
+            <strong>Download auf PC:</strong> Speichrt die Datei auf dem lokalen PC.
         </div>
     </form>
 
