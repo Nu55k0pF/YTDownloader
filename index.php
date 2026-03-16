@@ -21,7 +21,12 @@ function sanitize($text) {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-function build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly, $startTime = '00:00:00', $endTime = 'inf') {
+function build_yt_dlp_command(
+        $outputTemplate, 
+        $audioOnly, 
+        $segmentOnly, 
+        $startTime = '00:00:00', 
+        $endTime = 'inf') {
     $commandParts = ['yt-dlp', '-o', $outputTemplate, '--force-overwrites', '--no-playlist', '--part'];
 
     if ($audioOnly) {
