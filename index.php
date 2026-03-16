@@ -21,8 +21,8 @@ function sanitize($text) {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-function build_yt_dlp_command($outputTemplate, $audioOnly) {
-    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part', '--force-overwrites', '--no-playlist'];
+function build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly) {
+    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--force-overwrites', '--no-playlist', '--part', ''];
 
     if ($audioOnly) {
         // When extracting audio, yt-dlp downloads the source video first and then converts it.
@@ -37,6 +37,10 @@ function build_yt_dlp_command($outputTemplate, $audioOnly) {
         $commandParts[] = 'mp4';
         $commandParts[] = '--no-write-subs';
         $commandParts[] = '--no-write-thumbnail';
+    }
+
+    if ($segmentOnly) {
+        array_push($commandParts, '--download-sections "*.$startTime.-$endTime"'); // Example: download only the first minute
     }
 
     return $commandParts;
@@ -252,7 +256,10 @@ $flashes = get_flashes();
         </label>
 
         <label>
-            <input type="checkbox" name="audio_only" checked /> Download audio only (MP3)
+            <input type="checkbox" name="audio_only" checked /> Nur Audio herunterladen (MP3) <br>
+            <input type="checkbox" name="segment_only" /> Nur einen bestimmten Abschnitt herunterladen <strong>(funktioniert noch nicht)</stron>
+            <input type="text" name="startTime" placeholder="00:00:00" />
+            <input type="text" name="endTime" placeholder="00:01:00" />
         </label>
 
         <div style="margin-top: 1rem;">
