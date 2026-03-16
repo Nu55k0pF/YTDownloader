@@ -169,6 +169,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 //TODO: Add Option to download only segments of a video. Add boxes in the ui for that too
+/*--download-sections REGEX       Download only chapters that match the
+                                regular expression. A "*" prefix denotes
+                                time-range instead of chapter. Negative
+                                timestamps are calculated from the end.
+                                "*from-url" can be used to download between
+                                the "start_time" and "end_time" extracted
+                                from the URL. Needs ffmpeg. This option can
+                                be used multiple times to download multiple
+                                sections, e.g. --download-sections
+                                "*10:15-inf" --download-sections "intro"
+yt-dlp -x --audio-format best --no-keep-video --download-sections "*01:00-01:10" "https://www.youtube.com/watch?v=7UvesKl8_W8"                                
+*/
+
+
+
 
 $flashes = get_flashes();
 ?>
