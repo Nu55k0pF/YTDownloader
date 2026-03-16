@@ -27,7 +27,7 @@ function build_yt_dlp_command(
         $segmentOnly, 
         $startTime = '00:00:00', 
         $endTime = 'inf') {
-    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--force-overwrites', '--no-playlist', '--part'];
+    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--part', '--force-overwrites', '--no-playlist'];
 
     if ($audioOnly) {
         // When extracting audio, yt-dlp downloads the source video first and then converts it.
@@ -181,23 +181,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-//TODO: Add Option to download only segments of a video. Add boxes in the ui for that too
-/*--download-sections REGEX       Download only chapters that match the
-                                regular expression. A "*" prefix denotes
-                                time-range instead of chapter. Negative
-                                timestamps are calculated from the end.
-                                "*from-url" can be used to download between
-                                the "start_time" and "end_time" extracted
-                                from the URL. Needs ffmpeg. This option can
-                                be used multiple times to download multiple
-                                sections, e.g. --download-sections
-                                "*10:15-inf" --download-sections "intro"
-yt-dlp -x --audio-format best --no-keep-video --download-sections "*01:00-01:10" "https://www.youtube.com/watch?v=7UvesKl8_W8"                                
-*/
-
-
-
-
 $flashes = get_flashes();
 ?>
 <!DOCTYPE html>
@@ -266,19 +249,19 @@ $flashes = get_flashes();
 
         <label>
             <input type="checkbox" name="audio_only" checked /> Nur Audio herunterladen (MP3) <br>
-            <input type="checkbox" name="segment_only" /> Nur einen bestimmten Abschnitt herunterladen <strong>(funktioniert noch nicht)</strong>
+            <input type="checkbox" name="segment_only" /> Nur einen bestimmten Abschnitt herunterladen
             <input type="text" name="startTime" placeholder="00:00:00" />
             <input type="text" name="endTime" placeholder="00:01:00" />
         </label>
 
         <div style="margin-top: 1rem;">
-            </2><strong>ACHTUNG DER ZENON IMPORT FUNKTIONIERT NOCH NICHT RICHTIG!</strong></h2><br>
-            <button type="submit" name="download_type" value="direct">Zenon Import</button>
+            <!-- </2><strong>ACHTUNG DER ZENON IMPORT FUNKTIONIERT NOCH NICHT RICHTIG!</strong></h2><br> -->
+            <!-- <button type="submit" name="download_type" value="direct">Zenon Import</button> -->
             <button type="submit" name="download_type" value="browser">Download auf PC</button>
         </div>
 
         <div class="hint" style="margin-top: 0.5rem;">
-            <strong>Zenon Import:</strong> Speichert das Audio direct im Zenonbrowser in Redaktion_Temp<br>
+            <!-- <strong>Zenon Import:</strong> Speichert das Audio direct im Zenonbrowser in Redaktion_Temp<br> -->
             <strong>Download auf PC:</strong> Speichrt die Datei auf dem lokalen PC herunter
         </div>
     </form>
