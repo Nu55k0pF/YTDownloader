@@ -183,6 +183,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+//TODO: Fix timestamp download. Current code does not download the correct segment. Finde out why the timestamps are not handeld prorperly
+//TODO: Make Site more pretty
+//TODO: Find solution for downloading in .part file. Current code downloads directly even with the --part flag.
+
 $flashes = get_flashes();
 ?>
 <!DOCTYPE html>
