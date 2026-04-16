@@ -4,6 +4,31 @@
 
 session_start();set_time_limit(0);
 ignore_user_abort(true);
+
+if (isset($_GET['download_file'])) {
+    $downloadDir = get_temp_download_dir();
+    $filename = basename($_GET['download_file']);
+    $filePath = $downloadDir . '/' . $filename;
+
+    if (is_file($filePath)) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($filePath));
+        flush();
+        readfile($filePath);
+        unlink($filePath);
+        exit;
+    }
+
+    flash('Requested download file could not be found.', 'error');
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
 // Default save path (UNC path used in the original Python app)
 define('DEFAULT_SAVE_PATH', "\\\\PRODSERV5\\ZenonImport");
 
@@ -88,11 +113,12 @@ function timestamp_to_seconds($timestamp) {
 }
 
 function build_yt_dlp_command(
-        $outputTemplate, 
-        $audioOnly, 
-        $segmentOnly, 
-        $startTime = '00:00:00', 
-        $endTime = 'inf') {
+        $outputTemplate,
+        $audioOnly,
+        $segmentOnly,
+        $startTime = '00:00:00',
+        $endTime = 'inf',
+        $showProgress = false) {
     $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part', '--force-overwrites', '--no-playlist'];
 
     if ($audioOnly) {
@@ -121,6 +147,10 @@ function build_yt_dlp_command(
         }
     }
 
+    if ($showProgress) {
+        $commandParts[] = '--newline';
+    }
+
     return $commandParts;
 }
 
@@ -146,6 +176,172 @@ function run_yt_dlp($commandParts) {
         $output[] = 'Failed to start yt-dlp process.';
     }
 
+    return [$exitCode, $output];
+}
+
+function get_temp_download_dir() {
+    $tempDir = sys_get_temp_dir() . '/ytdl_downloads';
+    if (!is_dir($tempDir)) {
+        @mkdir($tempDir, 0755, true);
+    }
+    return $tempDir;
+}
+
+function initialize_progress_output() {
+    if (function_exists('apache_setenv')) {
+        apache_setenv('no-gzip', '1');
+    }
+
+    @ini_set('zlib.output_compression', '0');
+    @ini_set('output_buffering', '0');
+    @ini_set('implicit_flush', '1');
+
+    while (ob_get_level() > 0) {
+        @ob_end_flush();
+    }
+
+    @ob_implicit_flush(true);
+}
+
+function send_progress_page_header() {
+    echo <<<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download progress</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
+        .progress-container { width: 100%; background: #f3f4f6; border-radius: 1rem; overflow: hidden; height: 1.5rem; margin-bottom: 1rem; border: 1px solid #d1d5db; }
+        .progress-bar { height: 100%; width: 0; background: #10b981; transition: width 0.2s ease; }
+        .progress-status { margin-bottom: 1rem; font-size: 0.95rem; color: #111827; }
+        .progress-log { font-size: 0.85rem; color: #4b5563; white-space: pre-wrap; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; max-height: 260px; overflow: auto; }
+    </style>
+    <script>
+        function updateProgress(percent, message) {
+            document.getElementById('progress-bar').style.width = percent + '%';
+            document.getElementById('progress-label').textContent = percent + '%';
+            document.getElementById('status').textContent = message;
+        }
+
+        function appendLog(message) {
+            var log = document.getElementById('progress-log');
+            log.textContent += message + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</head>
+<body>
+    <h1>Download progress</h1>
+    <div class="progress-status" id="status">Starting download...</div>
+    <div class="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="progress-status">Progress: <span id="progress-label">0%</span></div>
+    <div class="progress-log" id="progress-log"></div>
+HTML;
+    @flush();
+}
+
+function send_progress_update($percent, $message) {
+    $message = (string)$message;
+    $encodedMessage = json_encode($message, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($encodedMessage === false) {
+        $encodedMessage = json_encode('Unable to render progress message', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+    echo '<script>updateProgress(' . (int)round($percent) . ',' . $encodedMessage . '); appendLog(' . $encodedMessage . ');</script>' . "\n";
+    @flush();
+}
+
+function send_progress_page_footer() {
+    echo '</body></html>';
+    @flush();
+}
+
+function parse_yt_dlp_progress($line) {
+    if (preg_match('/\[download\]\s+(\d{1,3}(?:\.\d+)?)%/', $line, $matches)) {
+        return (float)$matches[1];
+    }
+    if (preg_match('/(?:^|\s)(\d{1,3}(?:\.\d+)?)%(?:\s|$)/', $line, $matches)) {
+        return (float)$matches[1];
+    }
+    return null;
+}
+
+function run_yt_dlp_live($commandParts, $onLine) {
+    $descriptors = [
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($commandParts, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+    $output = [];
+    $exitCode = 1;
+
+    if (!is_resource($process)) {
+        return [1, ['Failed to start yt-dlp process.']];
+    }
+
+    stream_set_blocking($pipes[1], false);
+    stream_set_blocking($pipes[2], false);
+
+    $buffers = [1 => '', 2 => ''];
+
+    while (true) {
+        $read = [$pipes[1], $pipes[2]];
+        $write = null;
+        $except = null;
+        $ready = @stream_select($read, $write, $except, 0, 200000);
+
+        if ($ready !== false && $ready > 0) {
+            foreach ($read as $pipe) {
+                $fd = array_search($pipe, $pipes, true);
+                $chunk = fread($pipe, 8192);
+                if ($chunk === false || $chunk === '') {
+                    continue;
+                }
+                $buffers[$fd] .= $chunk;
+                $lines = preg_split('/\r\n|\r|\n/', $buffers[$fd]);
+                $buffers[$fd] = array_pop($lines);
+
+                foreach ($lines as $line) {
+                    $trimmed = trim($line);
+                    if ($trimmed === '') {
+                        continue;
+                    }
+                    $output[] = $trimmed;
+                    $onLine($trimmed);
+                }
+            }
+        }
+
+        $status = proc_get_status($process);
+        if (!$status['running']) {
+            break;
+        }
+
+        usleep(100000);
+    }
+
+    // Read remaining buffered output
+    foreach ($pipes as $fd => $pipe) {
+        if (is_resource($pipe)) {
+            while (($chunk = fread($pipe, 8192)) !== false && $chunk !== '') {
+                $buffers[$fd] .= $chunk;
+            }
+            $lines = preg_split('/\r\n|\r|\n/', $buffers[$fd]);
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if ($trimmed === '') {
+                    continue;
+                }
+                $output[] = $trimmed;
+                $onLine($trimmed);
+            }
+            fclose($pipe);
+        }
+    }
+
+    $exitCode = proc_close($process);
     return [$exitCode, $output];
 }
 
@@ -232,57 +428,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // This section deals with downloading to local machine
     } elseif ($downloadType === 'browser') {
-        // Download to temp directory and serve to browser
-        $tempDir = sys_get_temp_dir() . '/ytdl_downloads';
+        // Download to temp directory and show a progress page in the browser.
+        $tempDir = get_temp_download_dir();
         if (!is_dir($tempDir) && !@mkdir($tempDir, 0755, true)) {
             flash('Could not create temporary directory for download.', 'error');
             header('Location: ' . $_SERVER['PHP_SELF']);
             exit;
         }
 
-        // Build yt-dlp command for temp download
+        // Build yt-dlp command for temp download with progress output.
         $tempDirNormalized = str_replace('\\', '/', $tempDir);
         if ($audioOnly) {
             $outputTemplate = $tempDirNormalized . '/%(title)s.mp3';
         } else {
             $outputTemplate = $tempDirNormalized . '/%(title)s.mp4';
         }
-        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly, $startTime, $endTime);
+        $commandParts = build_yt_dlp_command($outputTemplate, $audioOnly, $segmentOnly, $startTime, $endTime, true);
         $commandParts[] = $url;
 
-        // Run the command
-        [$exitCode, $output] = run_yt_dlp($commandParts);
+        initialize_progress_output();
+        send_progress_page_header();
+        send_progress_update(0, 'Starting download...');
+
+        [$exitCode, $output] = run_yt_dlp_live($commandParts, function ($line) {
+            $progress = parse_yt_dlp_progress($line);
+            if ($progress !== null) {
+                send_progress_update($progress, $line);
+            } else {
+                send_progress_update(0, $line);
+            }
+        });
 
         if ($exitCode === 0) {
-            // Find the downloaded file
             $files = glob($tempDir . '/*');
+            if (!empty($files)) {
+                usort($files, fn($a, $b) => filemtime($b) <=> filemtime($a));
+            }
+
             if (empty($files)) {
-                flash('Download completed but file not found.', 'error');
-                header('Location: ' . $_SERVER['PHP_SELF']);
+                send_progress_update(100, 'Download completed but file not found.');
+                send_progress_page_footer();
                 exit;
             }
 
-            $downloadedFile = $files[0]; // Get the first (and likely only) file
-
-            // Serve the file for download
+            $downloadedFile = $files[0];
             $filename = basename($downloadedFile);
-            header('Content-Description: File Transfer');
-            header('Content-Type: application/octet-stream');
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Expires: 0');
-            header('Cache-Control: must-revalidate');
-            header('Pragma: public');
-            header('Content-Length: ' . filesize($downloadedFile));
-            flush();
-            readfile($downloadedFile);
-
-            // Clean up temp file
-            unlink($downloadedFile);
+            send_progress_update(100, 'Download complete. Preparing file...');
+            echo '<script>appendLog("Opening download..."); window.location.href = "' . $_SERVER['PHP_SELF'] . '?download_file=' . rawurlencode($filename) . '";</script>';
+            send_progress_page_footer();
             exit;
-        } else {
-            $outputText = implode("\n", $output);
-            flash('Error downloading: ' . sanitize($outputText), 'error');
         }
+
+        $outputText = implode("\n", $output);
+        send_progress_update(0, 'Error downloading: ' . $outputText);
+        send_progress_page_footer();
+        exit;
     }
 
     header('Location: ' . $_SERVER['PHP_SELF']);
