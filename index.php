@@ -2,8 +2,8 @@
 // Simple PHP frontend for downloading YouTube videos/audio using yt-dlp.
 // Requires yt-dlp to be installed and available in PATH.
 
-session_start();
-
+session_start();set_time_limit(0);
+ignore_user_abort(true);
 // Default save path (UNC path used in the original Python app)
 define('DEFAULT_SAVE_PATH', "\\\\PRODSERV5\\ZenonImport");
 
@@ -21,13 +21,79 @@ function sanitize($text) {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function parse_user_timestamp($timestamp) {
+    $timestamp = trim(str_replace(',', '.', $timestamp));
+    if ($timestamp === '') {
+        return null;
+    }
+
+    $parts = explode(':', $timestamp);
+    if (count($parts) === 1) {
+        if (!preg_match('/^\d+(?:\.\d+)?$/', $timestamp)) {
+            return null;
+        }
+
+        $seconds = (float) $timestamp;
+        $hours = floor($seconds / 3600);
+        $minutes = floor(($seconds % 3600) / 60);
+        $seconds = $seconds - ($hours * 3600 + $minutes * 60);
+    } elseif (count($parts) === 2 || count($parts) === 3) {
+        foreach ($parts as &$part) {
+            $part = trim($part);
+            if ($part === '') {
+                return null;
+            }
+        }
+
+        if (count($parts) === 2) {
+            $hours = 0;
+            $minutes = $parts[0];
+            $seconds = $parts[1];
+        } else {
+            $hours = $parts[0];
+            $minutes = $parts[1];
+            $seconds = $parts[2];
+        }
+
+        if (!preg_match('/^\d+$/', $hours) || !preg_match('/^\d+$/', $minutes) || !preg_match('/^\d+(?:\.\d+)?$/', $seconds)) {
+            return null;
+        }
+
+        $hours = (int) $hours;
+        $minutes = (int) $minutes;
+        $seconds = (float) $seconds;
+
+        if ($minutes < 0 || $minutes > 59 || $seconds < 0 || $seconds >= 60) {
+            return null;
+        }
+    } else {
+        return null;
+    }
+
+    $secondsWhole = floor($seconds);
+    $secondsFraction = $seconds - $secondsWhole;
+    $secondsFormatted = $secondsFraction > 0
+        ? sprintf('%02d.%03d', $secondsWhole, (int) round($secondsFraction * 1000))
+        : sprintf('%02d', $secondsWhole);
+
+    return sprintf('%02d:%02d:%s', $hours, $minutes, $secondsFormatted);
+}
+
+function timestamp_to_seconds($timestamp) {
+    $parts = explode(':', $timestamp);
+    $hours = (float) $parts[0];
+    $minutes = (float) $parts[1];
+    $seconds = (float) $parts[2];
+    return $hours * 3600 + $minutes * 60 + $seconds;
+}
+
 function build_yt_dlp_command(
         $outputTemplate, 
         $audioOnly, 
         $segmentOnly, 
         $startTime = '00:00:00', 
         $endTime = 'inf') {
-    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--part', '--force-overwrites', '--no-playlist'];
+    $commandParts = ['yt-dlp', '-o', $outputTemplate, '--no-part', '--force-overwrites', '--no-playlist'];
 
     if ($audioOnly) {
         // When extracting audio, yt-dlp downloads the source video first and then converts it.
@@ -37,18 +103,22 @@ function build_yt_dlp_command(
         $commandParts[] = '--audio-format';
         $commandParts[] = 'mp3';
         $commandParts[] = '--no-keep-video';
-        $commandParts[] = '--part';
+        $commandParts[] = '--no-part';
     } else {
         $commandParts[] = '--format';
         $commandParts[] = 'mp4';
         $commandParts[] = '--no-write-subs';
         $commandParts[] = '--no-write-thumbnail';
-        $commandParts[] = '--part';
+        $commandParts[] = '--no-part';
     }
 
     if ($segmentOnly) {
         $commandParts[] = "--download-sections";
-        $commandParts[] = "*$startTime-$endTime";
+        if ($endTime === '' || $endTime === 'inf') {
+            $commandParts[] = "*$startTime-";
+        } else {
+            $commandParts[] = "*$startTime-$endTime";
+        }
     }
 
     return $commandParts;
@@ -95,6 +165,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('Please provide a YouTube URL.', 'error');
         header('Location: ' . $_SERVER['PHP_SELF']);
         exit;
+    }
+
+    if ($segmentOnly) {
+        $normalizedStartTime = parse_user_timestamp($startTime);
+        $normalizedEndTime = parse_user_timestamp($endTime);
+
+        if ($normalizedStartTime === null && $normalizedEndTime === null) {
+            flash('Please enter a valid start or end time for segment download.', 'error');
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        }
+
+        if ($startTime !== '' && $normalizedStartTime === null) {
+            flash('Invalid start time format. Please use HH:MM:SS, MM:SS or total seconds.', 'error');
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        }
+
+        if ($endTime !== '' && $normalizedEndTime === null) {
+            flash('Invalid end time format. Please use HH:MM:SS, MM:SS or total seconds.', 'error');
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        }
+
+        if ($normalizedStartTime === null) {
+            $normalizedStartTime = '00:00:00';
+        }
+
+        if ($normalizedEndTime !== null && timestamp_to_seconds($normalizedEndTime) <= timestamp_to_seconds($normalizedStartTime)) {
+            flash('End time must be greater than start time.', 'error');
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        }
+
+        $startTime = $normalizedStartTime;
+        $endTime = $normalizedEndTime ?? '';
     }
 
 
@@ -185,7 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 //TODO: Fix timestamp download. Current code does not download the correct segment. Finde out why the timestamps are not handeld prorperly
 //TODO: Make Site more pretty
-//TODO: Find solution for downloading in .part file. Current code downloads directly even with the --part flag.
+//TODO: Find solution for downloading in .part file. Current code downloads directly even with the --no-part flag.
 
 $flashes = get_flashes();
 ?>
