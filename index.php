@@ -561,9 +561,9 @@ $flashes = get_flashes();
 
         <label>
             <input type="checkbox" name="audio_only" checked /> Nur Audio herunterladen (MP3) <br>
-            <input type="checkbox" name="segment_only" /> Nur einen bestimmten Abschnitt herunterladen
+            <input type="checkbox" name="segment_only" /> Nur einen bestimmten Abschnitt herunterladen <strong> Startet 10 sek vor Angegebenem Zeitpunkt </strong> 
             <input type="text" name="startTime" placeholder="00:00:00" />
-            <input type="text" name="endTime" placeholder="00:01:00" />
+            <input type="text" name="endTime" placeholder="00:01:00" /> 
         </label>
 
         <div style="margin-top: 1rem;">
